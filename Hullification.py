@@ -1,3 +1,4 @@
+from pulp import *
 #This procedure makes use of a convex hull Sub routine
 
 #(take inequalities example 2x1 + 4x3 ... = M -> parametric form
@@ -27,7 +28,7 @@ def SpliceInequalities(InequalityVector, index, val):
 		i+=1
 	return InequalityVector
 #Here we don't consider 
-def interpolate(point, Inequalities):
+def interpolate(point, Inequality, pointlevel, Ilevel, j):
 	#Each inequality represents a0x0  + ... a0xN <= targ
 	#Consider a0x0 + ... a0XN = targ, this has a parametric form
 	#So the parametric vector would be then ( (targ - a1x1 - .... xNxN)/a0, x1,x2 ... xN-1) 
@@ -37,16 +38,58 @@ def interpolate(point, Inequalities):
 	#easy to solve so when P_n = 0, this is the same as before, if all else is 0, P_n = 1, we get this point
 	#Then in parametric form we have ((targ - a1x1 - ..)/a0 + P0-targ/a0, x1 + P1xN, x2 + P2xN, ... XN-1 + PN-1XN) 
 	#NOw this needs to be converted to regular form	for processing 	
-	
+	#Advanced method: (given a1x1 + a2x2 + a3x3 +a_(j-1) x_(j-1) + a_(j+1)x_(j+1) ... aNxN = beta, 	x'1 x'2 ... x'j-1 x'j+1 ... x'n 
+	#WE note that resultant vector is (a1 a2 a3 ... a_(j-1) a_J ... aN Omega) 
+	#Such that a_j W  = Omega - Beta
+	# Ax' + a_j W2 = Omega 
+	#Final formula is that: a_j(W1 - W2) = Ax' - Beta 
+	#a_j = (Ax' - Beta)/(W1 - W2), and yet 
+	#Omega = a_jW + Beta 
+	i = 0
+	obj = 0
+	while i < len(point):
+		obj += point[i]*Inequality[i]
+		i+=1
+	#that dot product^ could be made faster later	
 
+	Inequality.insert(j-1, (obj - Inequality[len(Inequality)-1])/(Ilevel-pointlevel))
+	Inequality[len(Inequality)-1] += Inequality[j]*Ilevel
+
+	return Inequality
+def Optimize(objective, Inequalities,dimension):
+	#array of variables needs to be generated
+	Vararray = []
+	i = 0
+	while i < dimension:
+		Vararray.append(LpVariable("x"+str(i),0,1) # 0<= x_i <= 1
+		i+=1
+
+	prob = LpProblem("The_Problem",LpMaximize)
+
+	for line in Inequalities:
+		i = 0
+		sr = 0
+		while i < len(line)-1: #not including the bound
+			sr += Vararray[i]*line[i]
+			i+=1
+		prob+=(sr<=line[len(line)-1]) #add the inequality IN
+
+	status  = prob.solve() #solved the problem
+
+#Requires verification ahead of time
+#Requires in general that Ilevel, pointlevel are given, as well as the index j across the merge 
 #Generating "Cross List" of HULL
-def Merge(FirstPiece, Second Piece):
+def Merge(FirstPiece, Second Piece, pointlevel, Ilevel, j):
 	CrossList = []
 	for Inequalities in FirstPiece:
 		temppoint,val = Optimize(Inequalities[:-1],SecondPiece) 
-		CrossList.append(interpolate(temppoint,Inequalities))
+		CrossList.append(interpolate(temppoint,Inequalities, pointlevel, Ilevel, j))
 		
 	return CrossList
+
+
+
+
 
 #Detects and removes Redundant Ones 
 def Clean(Inequalities):
@@ -59,4 +102,3 @@ def Clean(Inequalities):
 		i+=1
 	return Inequalities
 
-#time to work on detecting emptiness
