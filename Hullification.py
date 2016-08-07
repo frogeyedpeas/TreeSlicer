@@ -28,6 +28,7 @@ def SpliceInequalities(InequalityVector, index, val):
 		i+=1
 	return InequalityVector
 #Here we don't consider 
+#Ilevel is the top, pointlevel is hte bottom (stupid notation)
 def interpolate(point, Inequality, pointlevel, Ilevel, j):
 	#Each inequality represents a0x0  + ... a0xN <= targ
 	#Consider a0x0 + ... a0XN = targ, this has a parametric form
@@ -73,32 +74,107 @@ def Optimize(objective, Inequalities,dimension):
 			sr += Vararray[i]*line[i]
 			i+=1
 		prob+=(sr<=line[len(line)-1]) #add the inequality IN
+	i = 0
+	obj = 0
+	while i < len(objective):
+		obj += (Vararray[i]*objective[i])
+		i+=1
+	prob+=obj #this is for optimization	
 
 	status  = prob.solve() #solved the problem
+	valuearray = []
+	i = 0
+	while i < dimension:
+		valuearray.append(value(Vararray[i]))
+		i+=1
+	return valuearray,val, status 
+
 
 #Requires verification ahead of time
 #Requires in general that Ilevel, pointlevel are given, as well as the index j across the merge 
 #Generating "Cross List" of HULL
-def Merge(FirstPiece, Second Piece, pointlevel, Ilevel, j):
+def Merge(FirstPiece, Second Piece, pointlevel, Ilevel, j, dimension):
 	CrossList = []
+	#Need to generate layer constraint 
 	for Inequalities in FirstPiece:
-		temppoint,val = Optimize(Inequalities[:-1],SecondPiece) 
+		temppoint,val,status= Optimize(Inequalities[:-1],SecondPiece, dimension) 
 		CrossList.append(interpolate(temppoint,Inequalities, pointlevel, Ilevel, j))
 		
 	return CrossList
 
-
-
-
-
 #Detects and removes Redundant Ones 
-def Clean(Inequalities):
+def Clean(Inequalities, dimension):
 	i = 0
 	while i < len(Inequalities):
-		temppoint,val = Optimize(Inequality[i],Inequalities)
-		if val < Inequalities[i][len(Inequalities[i])-1]:
+		temppoint,val, status = Optimize(Inequalities[i],Inequalities[:i]+Inequalities[i+1:], dimension)
+		#status fails means the system is infeasible in the first place
+		if status == -1:
+			return False
+
+		if val <= Inequalities[i][len(Inequalities[i])-1]:
 			Inequalities.pop(i) #remove redundant constraint
 			i-=1
 		i+=1
 	return Inequalities
+def copy(inputarray):
+	output = []
+	i = 0
+	while i < len(inputarray):
+		output.append(intputarray[i])
+		i+=1
+	return output
+
+def doubleLevelCopy(inputarray):
+	output = []
+	i = 0
+	while i < len(inputarray):
+		output.append(copy(inputarray[i]))
+		i+=1
+	return output
+#So given a collection of inequalities we begin testing integer satisfiability
+#Inequalities should be given as is
+def CheckIntegerSatisfiability(Inequalities, dimension):
+	point,val,status = Optimize([1],Inequalitites, dimension)
+	if status == -1:
+		return "Failed"
+	i = 0
+	UpSystem = doubleLevelCopy(Inequalities)
+	DownSystem = doubleLevelCopy(Inequalities)
+	TrueDimension = dimension
+	while i < dimension:
+		#for each variable we begin hull procedure
+		UpSystem = Clean(SpliceInequalities(UpSystem, i, 1), TrueDimension-1)
+		DownSystem = Clean(SpliceInequalities(DownSystem,i,0), TrueDimension-1)
+		
+	
+		if UpSystem != False
+			if  DownSystem != False:
+				TopCross = Clean(Merge(UpSystem,DownSystem,0, 1, i, TrueDimension-1), TrueDimension)
+				BottomCross =Clean( Merge(DownSystem,Upsystem,1,0,i, TrueDimension-1), TrueDimension)
+
+				#Set them the same way
+				UpSystem  = TopCross + BottomCross
+				DownSystem = TopCross + BottomCross
+
+			else:
+				DownSystem = UpSystem
+				TrueDimension-=1
+		
+		else:
+			if DownSystem != False:
+				
+				UpSystem = DownSystem
+				TrueDimesion-=1
+				
+			 
+		#system spliced
+		
+		
+				
+
+
+		
+
+
+
 
