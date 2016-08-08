@@ -1,6 +1,17 @@
 from pulp import *
 #This procedure makes use of a convex hull Sub routine
 
+#FUCK THIS ALGORITHM
+#IVE GONE INSANE BUILDING IT
+#In life there are scientists
+#They are content discovering what is and isn't
+#THen there are engineers
+#They seek to use waht they know to cause change
+#I thought I was a scientist
+#I'm secretly an Engineer
+#Dont let them know
+# - A poem
+
 #(take inequalities example 2x1 + 4x3 ... = M -> parametric form
 #Parametric simplification is pretty convenient suppose (Q1(x), Q2(x) ... QK(x)) is a parametric form and (T1(x), T2(x) ... TK(x)) is another
 #Then we can very efficiently glue by solving Q(0) = T(0) + (d0 d1 ... dK) for d_i, then
@@ -23,11 +34,13 @@ def SpliceInequalities(InequalityVector, index, val):
 	zao = len(InequalityVector)
 	while i < zao:
 		
-		point = InequalityVector[i].pop(index)
+		point = InequalityVector[i][index]
+		InequalityVector[index] = 0
 		InequalityVector[i][len(InequalityVector[i])-1] -= point*val
 		i+=1
 	return InequalityVector
 #Here we don't consider 
+#We keep rows blank since during fusion this becomes simpler
 #Ilevel is the top, pointlevel is hte bottom (stupid notation)
 def interpolate(point, Inequality, pointlevel, Ilevel, j):
 	#Each inequality represents a0x0  + ... a0xN <= targ
@@ -52,8 +65,8 @@ def interpolate(point, Inequality, pointlevel, Ilevel, j):
 		obj += point[i]*Inequality[i]
 		i+=1
 	#that dot product^ could be made faster later	
-
-	Inequality.insert(j-1, (obj - Inequality[len(Inequality)-1])/(Ilevel-pointlevel))
+	Inequality[j] = (obj - Inequality[len(Inequality)-1])/(Ilevel-pointlevel)	
+#	Inequality.insert(j-1, (obj - Inequality[len(Inequality)-1])/(Ilevel-pointlevel))
 	Inequality[len(Inequality)-1] += Inequality[j]*Ilevel
 
 	return Inequality
@@ -62,7 +75,7 @@ def Optimize(objective, Inequalities,dimension):
 	Vararray = []
 	i = 0
 	while i < dimension:
-		Vararray.append(LpVariable("x"+str(i),0,1) # 0<= x_i <= 1
+		Vararray.append(LpVariable("x"+str(i),0,1)) # 0<= x_i <= 1
 		i+=1
 
 	prob = LpProblem("The_Problem",LpMaximize)
@@ -93,7 +106,7 @@ def Optimize(objective, Inequalities,dimension):
 #Requires verification ahead of time
 #Requires in general that Ilevel, pointlevel are given, as well as the index j across the merge 
 #Generating "Cross List" of HULL
-def Merge(FirstPiece, Second Piece, pointlevel, Ilevel, j, dimension):
+def Merge(FirstPiece, SecondPiece, pointlevel, Ilevel, j, dimension):
 	CrossList = []
 	#Need to generate layer constraint 
 	for Inequalities in FirstPiece:
@@ -141,36 +154,88 @@ def CheckIntegerSatisfiability(Inequalities, dimension):
 	UpSystem = doubleLevelCopy(Inequalities)
 	DownSystem = doubleLevelCopy(Inequalities)
 	TrueDimension = dimension
+		
+	artificialconstraint1 = []
+	artificialconstraint2 = []
+	artificialconstraint3 = []
+	artificialconstraint4 = []
+	index = 0
+	while index < dimension:
+		artificialconstraint1.append(0)
+		artificialconstraint2.append(0)
+		artificialconstraint3.append(0)
+		artificialconstraint4.append(0)
+		index+=1
+	artificialconstraint1.append(1)
+	artificialconstraint2.append(-1)
+	artificialconstraint3.append(0)
+	artificialconstraint4.append(0)
 	while i < dimension:
 		#for each variable we begin hull procedure
-		UpSystem = Clean(SpliceInequalities(UpSystem, i, 1), TrueDimension-1)
-		DownSystem = Clean(SpliceInequalities(DownSystem,i,0), TrueDimension-1)
+		#during Cross generation: we don't want x = val constraints
+		#suppose we do, we have x <= val, x >= val these would break the formula
+		#would they? 
+		#
+		#We begin by branching:
+		UpSystem = (SpliceInequalities(UpSystem, i, 1))
+		DownSystem = (SpliceInequalities(DownSystem,i,0))
+		#Now that we have branched we enter the clean up stage
+		#UpSystem needs the constraint that x_i = 1
 		
-	
-		if UpSystem != False
+		artificialconstraint1[i] = 1
+		artificialconstraint2[i] = -1
+		artificialconstraint3[i] = 1
+		artificialconstraint4[i] = -1
+
+		
+		
+		#so now these components have been engineered:
+		#Downsystem needs the constraint that x_i = 0
+		
+		UpSystem += [artificialconstraint1, artificialconstraint2]
+		DownSystem += [artificialconstraint3, artificialconstraint4]
+		
+		UpSystem = clean(UpSystem, dimension)
+		DownSystem = clean(DownSystem,dimension)
+
+		#Now both systems are cleansed of redundant inequalities
+		if UpSystem != False:
 			if  DownSystem != False:
-				TopCross = Clean(Merge(UpSystem,DownSystem,0, 1, i, TrueDimension-1), TrueDimension)
-				BottomCross =Clean( Merge(DownSystem,Upsystem,1,0,i, TrueDimension-1), TrueDimension)
+				
+				UpSystem = UpSystem[:-2]
+				
+				TopCross = Clean(Merge(UpSystem,DownSystem,0, 1, i, dimension),dimension )
+				DownSystem = DownSystem[:-2]
+				UpSystem += [artificialconstraint1, artificialconstraint2]
+
+				BottomCross =Clean( Merge(DownSystem,Upsystem,1,0,i, dimension), dimension)
 
 				#Set them the same way
-				UpSystem  = TopCross + BottomCross
-				DownSystem = TopCross + BottomCross
+				UpSystem  = doubleLevelCopy(TopCross + BottomCross)
+				DownSystem = doubleLevelCopy(TopCross + BottomCross)
 
 			else:
-				DownSystem = UpSystem
-				TrueDimension-=1
+				DownSystem = doubleLevelCopy(UpSystem)
+				#TrueDimension-=1
 		
 		else:
 			if DownSystem != False:
 				
-				UpSystem = DownSystem
-				TrueDimesion-=1
+				UpSystem = doubleLevelCopy(DownSystem)
+				#iTrueDimesion-=1
 				
-			 
+			else:
+				return False #If both systems fail then the whole thing is infeasible
 		#system spliced
 		
+		#Reset constants
+		artificialconstraint1[i] = 0
+		artificialconstraint2[i] = 0
+		artificialconstraint3[i] = 0
+		artificialconstraint4[i] = 0
 		
-				
+
+		i+=1		
 
 
 		
