@@ -239,7 +239,8 @@ def CheckIntegerSatisfiability(Inequalities, dimension):
 
 
 		
-
-
+if __name__ == "__main__":
+	#time to test 
+	
 
 
