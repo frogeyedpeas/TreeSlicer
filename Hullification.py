@@ -35,7 +35,7 @@ def SpliceInequalities(InequalityVector, index, val):
 	while i < zao:
 		
 		point = InequalityVector[i][index]
-		InequalityVector[index] = 0
+		InequalityVector[i][index] = 0
 		InequalityVector[i][len(InequalityVector[i])-1] -= point*val
 		i+=1
 	return InequalityVector
@@ -95,11 +95,17 @@ def Optimize(objective, Inequalities,dimension):
 	prob+=obj #this is for optimization	
 
 	status  = prob.solve() #solved the problem
+	
 	valuearray = []
+	val = 0
 	i = 0
-	while i < dimension:
-		valuearray.append(value(Vararray[i]))
-		i+=1
+	print(status)
+	if status != -1:
+		while i < dimension:
+				
+			valuearray.append(value(Vararray[i]))
+			val += valuearray[i]*objective[i]
+			i+=1
 	return valuearray,val, status 
 
 
@@ -116,10 +122,10 @@ def Merge(FirstPiece, SecondPiece, pointlevel, Ilevel, j, dimension):
 	return CrossList
 
 #Detects and removes Redundant Ones 
-def Clean(Inequalities, dimension):
+def clean(Inequalities, dimension):
 	i = 0
 	while i < len(Inequalities):
-		temppoint,val, status = Optimize(Inequalities[i],Inequalities[:i]+Inequalities[i+1:], dimension)
+		temppoint,val, status = Optimize(Inequalities[i][:-1],Inequalities[:i]+Inequalities[i+1:], dimension)
 		#status fails means the system is infeasible in the first place
 		if status == -1:
 			return False
@@ -133,7 +139,7 @@ def copy(inputarray):
 	output = []
 	i = 0
 	while i < len(inputarray):
-		output.append(intputarray[i])
+		output.append(inputarray[i])
 		i+=1
 	return output
 
@@ -147,7 +153,12 @@ def doubleLevelCopy(inputarray):
 #So given a collection of inequalities we begin testing integer satisfiability
 #Inequalities should be given as is
 def CheckIntegerSatisfiability(Inequalities, dimension):
-	point,val,status = Optimize([1],Inequalitites, dimension)
+	i = 0
+	testobj = []
+	while i < dimension:
+		testobj.append(1)
+		i+=1
+	point,val,status = Optimize(testobj,Inequalities, dimension)
 	if status == -1:
 		return "Failed"
 	i = 0
@@ -237,10 +248,12 @@ def CheckIntegerSatisfiability(Inequalities, dimension):
 
 		i+=1		
 
-
+	return [True,UpSystem,DownSystem]
 		
 if __name__ == "__main__":
 	#time to test 
-	
+	#Sample System
 
+	InequalityList = [[1,1,1.2],[1,0,1],[-1,0,0],[0,1,1],[0,-1,0]]
 
+	print(CheckIntegerSatisfiability(InequalityList,2))
