@@ -99,13 +99,15 @@ def Optimize(objective, Inequalities,dimension):
 	valuearray = []
 	val = 0
 	i = 0
-	print(status)
 	if status != -1:
 		while i < dimension:
 				
 			valuearray.append(value(Vararray[i]))
-			val += valuearray[i]*objective[i]
+	#		val += valuearray[i]*objective[i]
 			i+=1
+
+	print("objective " + str(objective) + " system: " + str(Inequalities) + " status: " + str(status)+ " value array: " + str(valuearray)+ " status: " + str(LpStatus[status]))
+
 	return valuearray,val, status 
 
 
