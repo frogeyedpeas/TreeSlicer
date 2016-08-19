@@ -121,8 +121,7 @@ def Optimize(objective, Inequalities,dimension,avoider=-1):
 	prob+=obj #this is for optimization	
 	#print(prob.constraints)	
 	#status  = prob.solve() #solved the problem
-	print(Inequalities)
-	status = prob.solve() #GLPK style solve
+	status = prob.solve(GLPK(msg = 0)) #GLPK style solve
 	#print(status)	
 	valuearray = []
 	val = 0
@@ -146,10 +145,8 @@ def Merge(FirstPiece, SecondPiece, pointlevel, Ilevel, j, dimension):
 	#Need to generate layer constraint 
 	for Inequalities in FirstPiece:
 		temppoint,val,status= Optimize(Inequalities[:-1],SecondPiece, dimension) 
-		if temppoint == False:
-			print("System is inconsistent")
-			return False
-		CrossList.append(interpolate(temppoint,Inequalities, pointlevel, Ilevel, j))
+		if temppoint != False:
+			CrossList.append(interpolate(temppoint,Inequalities, pointlevel, Ilevel, j))
 		
 	return CrossList
 
@@ -162,11 +159,6 @@ def clean(Inequalities, dimension, avoider=-1):
 #		print(i,Inequalities[i], Inequalities[:i]+Inequalities[i+1:])
 		temppoint,val, status = Optimize(Inequalities[i][:-1],Inequalities[:i]+Inequalities[i+1:], dimension, avoider)
 		#status fails means the system is infeasible in the first place
-		if temppoint == False:
-			print("System is inconsistent")
-			return False
-
-
 		if status == -1:
 			print("Clean Was Infeasible")
 			return False
@@ -305,7 +297,7 @@ def GenerateSolution(Inequalities,dimension):
 	#now time to get sexy
 	i = 0
 #	systemforconsideration = taoism[1] #this is a copy of the system
-	systemforconsideration = Inequalities	
+	systemforconsideration = doubleLevelCopy(Inequalities)	
 	theyoga = []
 	
 	artificialconstraint1 = []
@@ -334,11 +326,13 @@ def GenerateSolution(Inequalities,dimension):
 		core = CheckIntegerSatisfiability(doubleLevelCopy(systemforconsideration +[ artificialconstraint1, artificialconstraint2]), dimension)
 		if not core: #if core is false
 			theyoga.append(0)
-			systemforconsideration += doubleLevelCopy([artificialconstraint3,artificialconstraint4])
+			Inequalities += doubleLevelCopy([artificialconstraint3, artificialconstraint4])
+			systemforconsideration = doubleLevelCopy(Inequalities)
 		else:
 			theyoga.append(1)
 			#systemforconsideration = core[1] #simplifes things a bit
-			systemforconsideration += doubleLevelCopy([artificialconstraint1, artificialconstraint2])
+			Inequalities+= doubleLevelCopy([artificialconstraint1, artificialconstraint2])
+			systemforconsideration = doubleLevelCopy(Inequalities)
 		artificialconstraint1[i] = 0
 		artificialconstraint2[i] = 0
 		artificialconstraint3[i] = 0
@@ -414,7 +408,6 @@ if __name__ == "__main__":
 		mx.append(0-float(x[i]))
 		i+=1
 	#A swap
-	swap = '''
 	s = typearray[4]
 	typearray[4] = typearray[1]
 	typearray[1] = s
@@ -425,13 +418,11 @@ if __name__ == "__main__":
 	typearray[2] = s
 	mx[9] = -typearray[9]
 	mx[2] = -typearray[2]
-	'''
+
 	
 	mx.append(-50)
 	typearray.append(50)	
 #	print("Constraints Built")
 	print([typearray,mx])
-	z = copy(typearray)
 	u = (GenerateSolution([typearray , mx],10))
 	print(u)
-	print(z)
